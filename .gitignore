@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Dart/Flutter library packages should not commit the root lockfile.
+/pubspec.lock
+
 # Symbolication related
 app.*.symbols
 

@@ -485,6 +485,165 @@ void main() {
     );
   });
 
+  testWidgets(
+    'ElasticSheetActions.of does not rebuild descendants every frame',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const _ActionsRebuildHarness());
+
+      final state = tester.state<_ActionsRebuildHarnessState>(
+        find.byType(_ActionsRebuildHarness),
+      );
+      final initialBuildCount = state.buildCount;
+
+      state.controller.expand();
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(state.buildCount, initialBuildCount);
+    },
+  );
+
+  testWidgets('invisible expanded content is not built while collapsed', (
+    WidgetTester tester,
+  ) async {
+    var expandedBuildCount = 0;
+
+    await tester.pumpWidget(
+      _buildHarness(
+        ElasticSheet(
+          isExpanded: false,
+          collapsedSize: _actionCollapsedSize,
+          expandedSize: _actionExpandedSize,
+          collapsedChild: const Text('Collapsed'),
+          expandedChild: _BuildCounter(
+            onBuild: () => expandedBuildCount += 1,
+            child: const SizedBox(height: 120),
+          ),
+        ),
+        hostSize: const Size(320, 320),
+      ),
+    );
+
+    expect(expandedBuildCount, 0);
+  });
+
+  testWidgets('invisible collapsed content is not built while expanded', (
+    WidgetTester tester,
+  ) async {
+    late ElasticSheetController controller;
+    var collapsedBuildCount = 0;
+
+    await tester.pumpWidget(
+      _ControlledVisibilityHarness(
+        onControllerReady: (value) => controller = value,
+        collapsedChild: _BuildCounter(
+          onBuild: () => collapsedBuildCount += 1,
+          child: const Text('Collapsed'),
+        ),
+        expandedChild: const SizedBox(height: 120),
+      ),
+    );
+
+    collapsedBuildCount = 0;
+    controller.jumpTo(1.0);
+    await tester.pump();
+
+    expect(collapsedBuildCount, 0);
+  });
+
+  testWidgets('supports swapping from one external controller to another', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const _ControllerSwapHarness());
+
+    await tester.tap(find.byKey(const Key('expand-current-controller')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('swap-controller')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('expand-current-controller')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('controller swap preserves progress and updates actions scope', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const _ControllerSwapHarness());
+
+    final state = tester.state<_ControllerSwapHarnessState>(
+      find.byType(_ControllerSwapHarness),
+    );
+
+    state.first.jumpTo(0.42);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('swap-controller')));
+    await tester.pump();
+
+    expect(state.second.value, closeTo(0.42, 0.01));
+
+    state.second.jumpTo(0.0);
+    await tester.pump();
+
+    expect(state.actionsController, same(state.second));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('supports switching from controlled to uncontrolled controller', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const _ControlledToUncontrolledHarness());
+
+    await tester.tap(find.byKey(const Key('toggle-expanded')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('switch-to-uncontrolled')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('toggle-expanded')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('supports switching from uncontrolled to controlled controller', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const _UncontrolledToControlledHarness());
+
+    await tester.tap(find.byKey(const Key('toggle-expanded')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('switch-to-controlled')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('toggle-expanded')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('toggle follows the target state while animation is in flight', (
+    WidgetTester tester,
+  ) async {
+    late ElasticSheetController controller;
+
+    await tester.pumpWidget(
+      _ControlledPulseHarness(onControllerReady: (value) => controller = value),
+    );
+
+    controller.expand();
+    controller.toggle();
+    await tester.pumpAndSettle();
+
+    expect(controller.isExpanded, isFalse);
+    expect(controller.value, 0.0);
+  });
+
   testWidgets('ready surfaces still require expanded content and size', (
     WidgetTester tester,
   ) async {
@@ -607,6 +766,113 @@ void main() {
     );
     expect(find.byType(SingleChildScrollView), findsNothing);
   });
+
+  testWidgets('controller dispose during pulse does not throw', (
+    WidgetTester tester,
+  ) async {
+    late ElasticSheetController controller;
+
+    await tester.pumpWidget(
+      _ControlledPulseHarness(onControllerReady: (c) => controller = c),
+    );
+
+    // Start a pulse but immediately navigate away (disposing the controller).
+    controller.pulse(); // ignore: unawaited_futures
+    await tester.pump();
+
+    // Dispose by removing the widget tree.
+    await tester.pumpWidget(const MaterialApp(home: Scaffold()));
+    await tester.pumpAndSettle();
+
+    // If we reach this point without a crash, the test passes.
+    expect(true, isTrue);
+  });
+
+  testWidgets('controller jumpTo sets the animation value', (
+    WidgetTester tester,
+  ) async {
+    late ElasticSheetController controller;
+
+    await tester.pumpWidget(
+      _ControlledPulseHarness(onControllerReady: (c) => controller = c),
+    );
+
+    controller.jumpTo(0.5);
+    expect(controller.value, 0.5);
+
+    controller.jumpTo(0.0);
+    expect(controller.value, 0.0);
+  });
+
+  test('ElasticSheetConfig.toString returns readable output', () {
+    const config = ElasticSheetConfig.gentle();
+    final str = config.toString();
+
+    expect(str, contains('ElasticSheetConfig'));
+    expect(str, contains('stiffness'));
+    expect(str, contains('damping'));
+    expect(str, contains('rebound'));
+  });
+
+  test('ElasticSheetConfig.copyWith preserves unmodified fields', () {
+    const original = ElasticSheetConfig.bouncy();
+    final modified = original.copyWith(stiffness: 999);
+
+    expect(modified.stiffness, 999);
+    expect(modified.damping, original.damping);
+    expect(modified.mass, original.mass);
+    expect(modified.overshootClamp, original.overshootClamp);
+    expect(modified.reboundProfile, original.reboundProfile);
+  });
+
+  testWidgets('config change during animation does not throw', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHarness(
+        ElasticSheet(
+          isExpanded: false,
+          config: _fastConfig,
+          collapsedSize: _collapsedSize,
+          expandedSize: _expandedSize,
+          collapsedChild: const Text('Open'),
+          expandedChild: _buildShortExpandedChild(),
+        ),
+      ),
+    );
+
+    // Start expanding.
+    await tester.pumpWidget(
+      _buildHarness(
+        ElasticSheet(
+          isExpanded: true,
+          config: _fastConfig,
+          collapsedSize: _collapsedSize,
+          expandedSize: _expandedSize,
+          collapsedChild: const Text('Open'),
+          expandedChild: _buildShortExpandedChild(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 10));
+
+    // Change config mid-animation.
+    await tester.pumpWidget(
+      _buildHarness(
+        ElasticSheet(
+          isExpanded: true,
+          config: const ElasticSheetConfig.gentle(),
+          collapsedSize: _collapsedSize,
+          expandedSize: _expandedSize,
+          collapsedChild: const Text('Open'),
+          expandedChild: _buildShortExpandedChild(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _ControlledPulseHarness extends StatefulWidget {
@@ -645,6 +911,331 @@ class _ControlledPulseHarnessState extends State<_ControlledPulseHarness>
         collapsedSize: _collapsedSize,
         collapsedChild: const Text('Pulse'),
       ),
+    );
+  }
+}
+
+class _ActionsRebuildHarness extends StatefulWidget {
+  const _ActionsRebuildHarness();
+
+  @override
+  State<_ActionsRebuildHarness> createState() => _ActionsRebuildHarnessState();
+}
+
+class _ActionsRebuildHarnessState extends State<_ActionsRebuildHarness>
+    with SingleTickerProviderStateMixin {
+  late final ElasticSheetController controller;
+  var buildCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = ElasticSheetController(vsync: this, config: _fastConfig);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildHarness(
+      ElasticSheet.controlled(
+        controller: controller,
+        collapsedSize: _actionCollapsedSize,
+        expandedSize: _actionExpandedSize,
+        collapsedChild: _ActionsRebuildCounter(onBuild: () => buildCount += 1),
+        expandedChild: const SizedBox(height: 120),
+      ),
+      hostSize: const Size(320, 320),
+    );
+  }
+}
+
+class _ActionsRebuildCounter extends StatelessWidget {
+  const _ActionsRebuildCounter({required this.onBuild});
+
+  final VoidCallback onBuild;
+
+  @override
+  Widget build(BuildContext context) {
+    onBuild();
+    final actions = ElasticSheetActions.of(context);
+
+    return TextButton(
+      key: const Key('actions-rebuild-counter-button'),
+      onPressed: actions.toggle,
+      child: const Text('Toggle'),
+    );
+  }
+}
+
+class _ControlledVisibilityHarness extends StatefulWidget {
+  const _ControlledVisibilityHarness({
+    required this.onControllerReady,
+    required this.collapsedChild,
+    required this.expandedChild,
+  });
+
+  final ValueChanged<ElasticSheetController> onControllerReady;
+  final Widget collapsedChild;
+  final Widget expandedChild;
+
+  @override
+  State<_ControlledVisibilityHarness> createState() =>
+      _ControlledVisibilityHarnessState();
+}
+
+class _ControlledVisibilityHarnessState
+    extends State<_ControlledVisibilityHarness>
+    with SingleTickerProviderStateMixin {
+  late final ElasticSheetController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = ElasticSheetController(vsync: this, config: _fastConfig);
+    widget.onControllerReady(controller);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildHarness(
+      ElasticSheet.controlled(
+        controller: controller,
+        collapsedSize: _actionCollapsedSize,
+        expandedSize: _actionExpandedSize,
+        collapsedChild: widget.collapsedChild,
+        expandedChild: widget.expandedChild,
+      ),
+      hostSize: const Size(320, 320),
+    );
+  }
+}
+
+class _BuildCounter extends StatelessWidget {
+  const _BuildCounter({required this.onBuild, required this.child});
+
+  final VoidCallback onBuild;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    onBuild();
+    return child;
+  }
+}
+
+class _ControllerSwapHarness extends StatefulWidget {
+  const _ControllerSwapHarness();
+
+  @override
+  State<_ControllerSwapHarness> createState() => _ControllerSwapHarnessState();
+}
+
+class _ControllerSwapHarnessState extends State<_ControllerSwapHarness>
+    with TickerProviderStateMixin {
+  late final ElasticSheetController first;
+  late final ElasticSheetController second;
+  ElasticSheetController? actionsController;
+  var useSecond = false;
+
+  @override
+  void initState() {
+    super.initState();
+    first = ElasticSheetController(vsync: this);
+    second = ElasticSheetController(vsync: this);
+  }
+
+  @override
+  void dispose() {
+    first.dispose();
+    second.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildHarness(
+      Column(
+        children: [
+          TextButton(
+            key: const Key('swap-controller'),
+            onPressed: () => setState(() => useSecond = true),
+            child: const Text('Swap'),
+          ),
+          TextButton(
+            key: const Key('expand-current-controller'),
+            onPressed: () => (useSecond ? second : first).expand(),
+            child: const Text('Expand'),
+          ),
+          ElasticSheet.controlled(
+            controller: useSecond ? second : first,
+            collapsedSize: _actionCollapsedSize,
+            expandedSize: _actionExpandedSize,
+            collapsedChild: _ActionsControllerReporter(
+              onBuild: (controller) => actionsController = controller,
+            ),
+            expandedChild: const SizedBox(height: 120),
+          ),
+        ],
+      ),
+      hostSize: const Size(320, 420),
+    );
+  }
+}
+
+class _ActionsControllerReporter extends StatelessWidget {
+  const _ActionsControllerReporter({required this.onBuild});
+
+  final ValueChanged<ElasticSheetController> onBuild;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = ElasticSheetActions.of(context);
+    onBuild(actions.controller);
+    return const Text('Collapsed');
+  }
+}
+
+class _ControlledToUncontrolledHarness extends StatefulWidget {
+  const _ControlledToUncontrolledHarness();
+
+  @override
+  State<_ControlledToUncontrolledHarness> createState() =>
+      _ControlledToUncontrolledHarnessState();
+}
+
+class _ControlledToUncontrolledHarnessState
+    extends State<_ControlledToUncontrolledHarness>
+    with TickerProviderStateMixin {
+  late final ElasticSheetController controller;
+  var useExternalController = true;
+  var expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = ElasticSheetController(vsync: this);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sheet = useExternalController
+        ? ElasticSheet.controlled(
+            controller: controller,
+            collapsedSize: _actionCollapsedSize,
+            expandedSize: _actionExpandedSize,
+            collapsedChild: const Text('Collapsed'),
+            expandedChild: const SizedBox(height: 120),
+          )
+        : ElasticSheet(
+            isExpanded: expanded,
+            config: _fastConfig,
+            collapsedSize: _actionCollapsedSize,
+            expandedSize: _actionExpandedSize,
+            collapsedChild: const Text('Collapsed'),
+            expandedChild: const SizedBox(height: 120),
+          );
+
+    return _buildHarness(
+      Column(
+        children: [
+          TextButton(
+            key: const Key('switch-to-uncontrolled'),
+            onPressed: () => setState(() => useExternalController = false),
+            child: const Text('Switch'),
+          ),
+          TextButton(
+            key: const Key('toggle-expanded'),
+            onPressed: () => setState(() => expanded = !expanded),
+            child: const Text('Toggle expanded'),
+          ),
+          sheet,
+        ],
+      ),
+      hostSize: const Size(320, 420),
+    );
+  }
+}
+
+class _UncontrolledToControlledHarness extends StatefulWidget {
+  const _UncontrolledToControlledHarness();
+
+  @override
+  State<_UncontrolledToControlledHarness> createState() =>
+      _UncontrolledToControlledHarnessState();
+}
+
+class _UncontrolledToControlledHarnessState
+    extends State<_UncontrolledToControlledHarness>
+    with TickerProviderStateMixin {
+  late final ElasticSheetController controller;
+  var useExternalController = false;
+  var expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = ElasticSheetController(vsync: this);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sheet = useExternalController
+        ? ElasticSheet.controlled(
+            controller: controller,
+            collapsedSize: _actionCollapsedSize,
+            expandedSize: _actionExpandedSize,
+            collapsedChild: const Text('Collapsed'),
+            expandedChild: const SizedBox(height: 120),
+          )
+        : ElasticSheet(
+            isExpanded: expanded,
+            config: _fastConfig,
+            collapsedSize: _actionCollapsedSize,
+            expandedSize: _actionExpandedSize,
+            collapsedChild: const Text('Collapsed'),
+            expandedChild: const SizedBox(height: 120),
+          );
+
+    return _buildHarness(
+      Column(
+        children: [
+          TextButton(
+            key: const Key('switch-to-controlled'),
+            onPressed: () => setState(() => useExternalController = true),
+            child: const Text('Switch'),
+          ),
+          TextButton(
+            key: const Key('toggle-expanded'),
+            onPressed: () => setState(() => expanded = !expanded),
+            child: const Text('Toggle expanded'),
+          ),
+          sheet,
+        ],
+      ),
+      hostSize: const Size(320, 420),
     );
   }
 }

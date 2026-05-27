@@ -6,7 +6,7 @@ topics:
   - expandable
   - bottom-sheet
   - surface
-version: 0.1.2
+version: 0.2.0
 homepage: https://github.com/Abdualsslam/elastic_sheet
 repository: https://github.com/Abdualsslam/elastic_sheet
 issue_tracker: https://github.com/Abdualsslam/elastic_sheet/issues
@@ -25,3 +25,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+screenshots:
+  - description: 'Care Desk showcase - elastic expand/collapse in action'
+    path: doc/Care Desk showcase.gif
+  - description: 'Spring presets - configurable spring physics'
+    path: doc/presets.gif
+  - description: 'Anchor system - compact mode'
+    path: doc/anchor compact.gif
+  - description: 'Anchor system - grid mode'
+    path: doc/anchor grid.gif

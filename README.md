@@ -36,7 +36,7 @@ It is designed for inline actions, drawers, search affordances, composer bars, a
 
 ```yaml
 dependencies:
-  elastic_sheet: ^0.1.0
+  elastic_sheet: ^0.2.0
 ```
 
 ## Usage

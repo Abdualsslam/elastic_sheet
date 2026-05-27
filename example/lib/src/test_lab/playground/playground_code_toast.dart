@@ -312,7 +312,7 @@ class _CodeLine extends StatelessWidget {
         color: highlighted ? const Color(0xFF313244) : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         border: highlighted
-            ? Border.all(color: const Color(0xFF89B4FA).withOpacity(0.25))
+            ? Border.all(color: const Color(0xFF89B4FA).withValues(alpha: 0.25))
             : null,
       ),
       child: Row(
@@ -394,7 +394,7 @@ class _CodeLine extends StatelessWidget {
               margin: const EdgeInsets.only(left: 8),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFF89B4FA).withOpacity(0.15),
+                color: const Color(0xFF89B4FA).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(

@@ -41,6 +41,8 @@ class ElasticSheetController extends ChangeNotifier {
   ElasticSheetConfig _config;
   final AnimationController _animationController;
   bool _isPulsing = false;
+  bool _targetExpanded = false;
+  bool _isDisposed = false;
 
   /// The current config. Changing this live re-configures the animation
   /// durations immediately.
@@ -59,7 +61,10 @@ class ElasticSheetController extends ChangeNotifier {
   double get value => _animationController.value;
 
   /// Whether the surface is currently expanding or is fully expanded.
-  bool get isExpanded => !_isPulsing && _animationController.value > 0;
+  bool get isExpanded =>
+      !_isPulsing &&
+      (_targetExpanded ||
+          _animationController.status == AnimationStatus.completed);
 
   /// Whether a collapsed hint pulse is currently running.
   bool get isPulsing => _isPulsing;
@@ -72,19 +77,27 @@ class ElasticSheetController extends ChangeNotifier {
   AnimationController get rawController => _animationController;
 
   /// Animate to the expanded state.
-  Future<void> expand() async {
+  ///
+  /// Returns a [TickerFuture] that completes when the animation finishes.
+  /// Call [TickerFuture.orCancel] to await with cancellation support.
+  TickerFuture expand() {
+    _targetExpanded = true;
     _cancelPulseIfNeeded();
     return _animationController.forward();
   }
 
   /// Animate to the collapsed state.
-  Future<void> collapse() async {
+  ///
+  /// Returns a [TickerFuture] that completes when the animation finishes.
+  /// Call [TickerFuture.orCancel] to await with cancellation support.
+  TickerFuture collapse() {
+    _targetExpanded = false;
     _cancelPulseIfNeeded();
     return _animationController.reverse();
   }
 
   /// Toggle between expanded and collapsed.
-  Future<void> toggle() => isExpanded ? collapse() : expand();
+  TickerFuture toggle() => _targetExpanded ? collapse() : expand();
 
   /// Play a short pulse while keeping the surface logically collapsed.
   Future<void> pulse() async {
@@ -106,19 +119,26 @@ class ElasticSheetController extends ChangeNotifier {
         duration: pulseDuration,
         curve: Curves.easeOutCubic,
       );
+    } on TickerCanceled {
+      // Controller was disposed during the pulse animation.
     } finally {
-      _animationController.duration = previousDuration;
-      _animationController.reverseDuration = previousReverseDuration;
-      _animationController.value = 0.0;
-      _isPulsing = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _animationController.duration = previousDuration;
+        _animationController.reverseDuration = previousReverseDuration;
+        _animationController.value = 0.0;
+        _isPulsing = false;
+        notifyListeners();
+      }
     }
   }
 
   /// Jump to a specific progress value without animation.
   void jumpTo(double value) {
     _cancelPulseIfNeeded();
-    _animationController.value = value;
+    final clampedValue = value.clamp(0.0, 1.0);
+    _animationController.value = clampedValue;
+    _targetExpanded = clampedValue > 0.0;
+    notifyListeners();
   }
 
   Duration get _pulseDuration {
@@ -140,6 +160,7 @@ class ElasticSheetController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _animationController
       ..removeListener(notifyListeners)
       ..dispose();

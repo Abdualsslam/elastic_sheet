@@ -179,8 +179,9 @@ class _ElasticSheetState extends State<ElasticSheet>
 
   late AnimationController _rawController;
   ElasticSheetController? _ownedController;
-  bool _lastIsExpanded = false;
   double? _measuredExpandedChildHeight;
+  late Widget _cachedScopedCollapsed;
+  late Widget _cachedScopedExpanded;
 
   ElasticSheetController get _effectiveController =>
       widget.controller ?? _ownedController!;
@@ -210,37 +211,70 @@ class _ElasticSheetState extends State<ElasticSheet>
   Widget get _effectiveExpandedChild =>
       widget.expandedChild ?? const SizedBox.shrink();
 
-  Widget get _scopedCollapsedChild =>
-      _wrapWithActionsScope(widget.collapsedChild);
+  void _rebuildCachedChildren() {
+    _cachedScopedCollapsed = _wrapWithActionsScope(widget.collapsedChild);
+    _cachedScopedExpanded = _wrapWithActionsScope(_effectiveExpandedChild);
+  }
 
-  Widget get _scopedExpandedChild =>
-      _wrapWithActionsScope(_effectiveExpandedChild);
+  void _attachRawController(AnimationController controller) {
+    controller.addStatusListener(_onAnimationStatus);
+  }
+
+  void _detachRawController(AnimationController controller) {
+    controller.removeStatusListener(_onAnimationStatus);
+  }
+
+  void _createOwnedController() {
+    _ownedController = ElasticSheetController(
+      vsync: this,
+      config: widget.config,
+    );
+  }
+
+  void _replaceController(ElasticSheetController? oldExternalController) {
+    final oldRawController = _rawController;
+    final oldValue = oldRawController.value;
+
+    _detachRawController(oldRawController);
+
+    if (oldExternalController == null && widget.controller != null) {
+      _ownedController?.dispose();
+      _ownedController = null;
+    } else if (oldExternalController != null && widget.controller == null) {
+      _createOwnedController();
+    }
+
+    _rawController = _effectiveController.rawController;
+    _effectiveController.jumpTo(oldValue);
+    _attachRawController(_rawController);
+  }
 
   @override
   void initState() {
     super.initState();
     assert(_debugValidateInputs());
 
-    if (widget.controller != null) {
-      _rawController = widget.controller!.rawController;
-    } else {
-      _ownedController = ElasticSheetController(
-        vsync: this,
-        config: widget.config,
-      );
-      _rawController = _ownedController!.rawController;
+    if (widget.controller == null) {
+      _createOwnedController();
     }
 
-    _rawController.addStatusListener(_onAnimationStatus);
+    _rawController = _effectiveController.rawController;
+    _attachRawController(_rawController);
+    _rebuildCachedChildren();
     if (_isReady && widget.isExpanded == true) {
-      _rawController.value = 1.0;
-      _lastIsExpanded = true;
+      _effectiveController.jumpTo(1.0);
     }
   }
 
   @override
   void didUpdateWidget(covariant ElasticSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    final controllerChanged = oldWidget.controller != widget.controller;
+
+    if (controllerChanged) {
+      _replaceController(oldWidget.controller);
+    }
 
     if (widget.contentState != oldWidget.contentState ||
         widget.expandedSize != oldWidget.expandedSize ||
@@ -249,21 +283,30 @@ class _ElasticSheetState extends State<ElasticSheet>
       _measuredExpandedChildHeight = null;
     }
 
-    if (_ownedController != null && widget.config != oldWidget.config) {
-      _ownedController!.config = widget.config;
+    if (widget.config != oldWidget.config && widget.controller == null) {
+      _ownedController?.config = widget.config;
+    }
+
+    if (widget.collapsedChild != oldWidget.collapsedChild ||
+        widget.expandedChild != oldWidget.expandedChild ||
+        controllerChanged) {
+      _rebuildCachedChildren();
     }
 
     if (!_isReady) {
-      _lastIsExpanded = false;
       if (!_isPulsing && _rawController.value != 0.0) {
         _rawController.value = 0.0;
       }
       return;
     }
 
-    if (widget.isExpanded != null && widget.isExpanded != _lastIsExpanded) {
-      _lastIsExpanded = widget.isExpanded!;
-      widget.isExpanded! ? _rawController.forward() : _rawController.reverse();
+    if (widget.isExpanded != oldWidget.isExpanded &&
+        widget.isExpanded != null) {
+      if (widget.isExpanded!) {
+        _effectiveController.expand();
+      } else {
+        _effectiveController.collapse();
+      }
     }
   }
 
@@ -291,7 +334,7 @@ class _ElasticSheetState extends State<ElasticSheet>
 
   @override
   void dispose() {
-    _rawController.removeStatusListener(_onAnimationStatus);
+    _detachRawController(_rawController);
     _ownedController?.dispose();
     super.dispose();
   }
@@ -448,25 +491,27 @@ class _ElasticSheetState extends State<ElasticSheet>
           child: Stack(
             fit: StackFit.expand,
             children: [
-              IgnorePointer(
-                ignoring: expandedOpacity < 0.01,
-                child: Opacity(
-                  opacity: expandedOpacity.clamp(0.0, 1.0),
-                  child: Transform.translate(
-                    offset: Offset(0, contentOffset),
-                    child: _buildExpandedContent(
-                      shouldScroll: shouldScrollExpandedContent,
+              if (expandedOpacity > 0.005)
+                IgnorePointer(
+                  ignoring: expandedOpacity < 0.01,
+                  child: Opacity(
+                    opacity: expandedOpacity.clamp(0.0, 1.0),
+                    child: Transform.translate(
+                      offset: Offset(0, contentOffset),
+                      child: _buildExpandedContent(
+                        shouldScroll: shouldScrollExpandedContent,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              IgnorePointer(
-                ignoring: collapsedOpacity < 0.01,
-                child: Opacity(
-                  opacity: collapsedOpacity.clamp(0.0, 1.0),
-                  child: Center(child: _scopedCollapsedChild),
+              if (collapsedOpacity > 0.005)
+                IgnorePointer(
+                  ignoring: collapsedOpacity < 0.01,
+                  child: Opacity(
+                    opacity: collapsedOpacity.clamp(0.0, 1.0),
+                    child: Center(child: _cachedScopedCollapsed),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -505,7 +550,7 @@ class _ElasticSheetState extends State<ElasticSheet>
           ),
           child: Opacity(
             opacity: _isUnavailable ? 0.6 : 1.0,
-            child: Center(child: _scopedCollapsedChild),
+            child: Center(child: _cachedScopedCollapsed),
           ),
         ),
       ),
@@ -577,26 +622,25 @@ class _ElasticSheetState extends State<ElasticSheet>
       ],
     );
 
-    return BoxDecoration.lerp(
-      baseDecoration.copyWith(borderRadius: currentRadius),
-      pendingDecoration,
-      1.0,
-    )!;
+    return pendingDecoration;
   }
 
   Widget _buildExpandedContent({required bool shouldScroll}) {
     if (shouldScroll) {
-      return SingleChildScrollView(primary: false, child: _scopedExpandedChild);
+      return SingleChildScrollView(
+        primary: false,
+        child: _cachedScopedExpanded,
+      );
     }
     if (_usesDynamicExpandedHeight) {
       return OverflowBox(
         alignment: Alignment.topCenter,
         minHeight: 0,
         maxHeight: double.infinity,
-        child: _scopedExpandedChild,
+        child: _cachedScopedExpanded,
       );
     }
-    return _scopedExpandedChild;
+    return _cachedScopedExpanded;
   }
 
   Widget _buildExpandedChildMeasurement() {
@@ -613,7 +657,7 @@ class _ElasticSheetState extends State<ElasticSheet>
             width: _effectiveExpandedSize.width,
             child: _SizeReporter(
               onSizeChanged: _handleExpandedChildMeasuredSize,
-              child: _scopedExpandedChild,
+              child: _cachedScopedExpanded,
             ),
           ),
         ),
@@ -774,8 +818,9 @@ class _RenderSizeReporter extends RenderProxyBox {
       return;
     }
     _oldSize = newSize;
+    final currentCallback = onSizeChanged;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      onSizeChanged(newSize);
+      currentCallback(newSize);
     });
   }
 }

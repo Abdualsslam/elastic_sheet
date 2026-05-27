@@ -13,11 +13,11 @@ enum ElasticSheetReboundProfile {
 /// every value yourself.
 class ElasticSheetConfig {
   /// Controls how fast the spring pulls toward the target.
-  /// Higher = snappier.  Range: 50â€“500.  Default: 220.
+  /// Higher = snappier.  Range: 50-500.  Default: 220.
   final double stiffness;
 
   /// Controls how quickly oscillation dies out.
-  /// Lower = more bouncy.  Range: 5â€“40.  Default: 18.
+  /// Lower = more bouncy.  Range: 5-40.  Default: 18.
   final double damping;
 
   /// Virtual mass on the spring.
@@ -57,7 +57,7 @@ class ElasticSheetConfig {
     this.reboundProfile = ElasticSheetReboundProfile.simultaneous,
   });
 
-  /// Gentle â€” subtle overshoot, soft feel.
+  /// Gentle - subtle overshoot, soft feel.
   const ElasticSheetConfig.gentle()
     : stiffness = 160,
       damping = 22,
@@ -69,7 +69,7 @@ class ElasticSheetConfig {
       collapseDuration = const Duration(milliseconds: 600),
       reboundProfile = ElasticSheetReboundProfile.simultaneous;
 
-  /// Bouncy â€” exaggerated overshoot, playful feel.
+  /// Bouncy - exaggerated overshoot, playful feel.
   const ElasticSheetConfig.bouncy()
     : stiffness = 280,
       damping = 12,
@@ -81,7 +81,7 @@ class ElasticSheetConfig {
       collapseDuration = const Duration(milliseconds: 500),
       reboundProfile = ElasticSheetReboundProfile.simultaneous;
 
-  /// Snappy â€” fast, minimal overshoot, utilitarian.
+  /// Snappy - fast, minimal overshoot, utilitarian.
   const ElasticSheetConfig.snappy()
     : stiffness = 380,
       damping = 28,
@@ -157,4 +157,17 @@ class ElasticSheetConfig {
     collapseDuration,
     reboundProfile,
   );
+
+  @override
+  String toString() =>
+      'ElasticSheetConfig('
+      'stiffness: $stiffness, '
+      'damping: $damping, '
+      'mass: $mass, '
+      'overshootClamp: $overshootClamp, '
+      'hStretch: $horizontalStretchAmplitude, '
+      'vStretch: $verticalStretchAmplitude, '
+      'expand: ${expandDuration.inMilliseconds}ms, '
+      'collapse: ${collapseDuration.inMilliseconds}ms, '
+      'rebound: $reboundProfile)';
 }

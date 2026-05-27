@@ -4,10 +4,98 @@ import 'package:flutter/animation.dart';
 
 import 'elastic_sheet_config.dart';
 
+/// Axis identifier for per-axis motion calculations.
 enum ElasticSheetAxis { horizontal, vertical }
 
+/// Pure-function motion math for [ElasticSheet].
+///
+/// Every constant below was tuned empirically to approximate the feel of a
+/// critically-damped spring with a deliberate liquid-stretch overshoot.
+/// The naming convention groups them by the motion phase they belong to.
 class ElasticSheetMotion {
   const ElasticSheetMotion._();
+
+  // ─── Axis-progress timing windows ──────────────────────────────
+  // These [begin, end] pairs define *when* each axis starts and
+  // finishes its base interpolation within the [0..1] animation.
+  // Horizontal starts slightly later to create a staggered feel.
+
+  static const double _hExpandStart = 0.10;
+  static const double _hExpandEnd = 0.88;
+  static const double _vExpandStart = 0.05;
+  static const double _vExpandEnd = 0.74;
+
+  static const double _hCollapseStart = 0.0;
+  static const double _hCollapseEnd = 1.0;
+  static const double _vCollapseStart = 0.1;
+  static const double _vCollapseEnd = 0.93;
+
+  // ─── Anticipation timing ───────────────────────────────────────
+  // A brief backward motion before expansion, like a jump windup.
+
+  static const double _hAnticipationEnd = 0.16;
+  static const double _vAnticipationEnd = 0.18;
+
+  // ─── Stretch-pulse timing ──────────────────────────────────────
+  // The liquid stretch appears in the second half of the motion.
+
+  static const double _stretchExpandStart = 0.52;
+  static const double _stretchExpandEnd = 0.90;
+  static const double _stretchCollapseStart = 0.10;
+  static const double _stretchCollapseEnd = 0.52;
+
+  // ─── Envelope exponents ────────────────────────────────────────
+  // Control how quickly oscillation energy dissipates.
+  // Higher exponent = faster decay.
+
+  /// Main stretch envelope decay rate.
+  static const double _stretchDecay = 1.35;
+
+  /// Secondary recoil oscillation decay rate.
+  static const double _recoilDecay = 2.1;
+
+  /// Anticipation pulse envelope decay rate.
+  static const double _anticipationDecay = 1.4;
+
+  /// Damped pulse envelope decay rate (used for radius and edge).
+  static const double _dampedPulseDecay = 1.6;
+
+  // ─── Recoil mix ratio ──────────────────────────────────────────
+  // How much the secondary recoil wave contributes relative to main.
+
+  static const double _hRecoilMix = 0.21;
+  static const double _vRecoilMix = 0.15;
+
+  // ─── Overshoot settle ──────────────────────────────────────────
+  // Secondary settle pass that pulls the overshoot back toward rest.
+
+  static const double _settleStart = 0.58;
+  static const double _settleRatio = 0.18;
+
+  // ─── Sequential rebound timing ─────────────────────────────────
+  // Phase windows for the cross-axis sequential rebound profile.
+
+  static const double _reboundFirstStart = 0.56;
+  static const double _reboundFirstEnd = 0.78;
+  static const double _reboundSecondStart = 0.74;
+  static const double _reboundSecondEnd = 0.98;
+
+  // ─── Horizontal damping for simultaneous rebound ───────────────
+  // The horizontal axis receives less rebound than vertical to
+  // avoid the surface looking like it's "breathing" side-to-side.
+
+  static const double _hSimultaneousReboundDamping = 0.45;
+
+  // ─── Clamp bounds ──────────────────────────────────────────────
+  // Prevent per-axis rebound from exceeding reasonable visual limits.
+
+  static const double _reboundScaleMin = 0.88;
+  static const double _reboundScaleMax = 1.12;
+
+  /// Maximum anticipation dip before the expansion begins.
+  static const double _maxAnticipation = -0.05;
+
+  // ─── Overshoot amplitude mapping ───────────────────────────────
 
   static double overshootAmplitudeForClamp(double overshootClamp) {
     if (overshootClamp <= 1.0) {
@@ -15,6 +103,8 @@ class ElasticSheetMotion {
     }
     return ((overshootClamp - 1.0) * 3.0).clamp(0.0, 0.18);
   }
+
+  // ─── Main axis progress ────────────────────────────────────────
 
   static double axisProgress(
     double progress, {
@@ -27,14 +117,14 @@ class ElasticSheetMotion {
     final base = isCollapsing
         ? segment(
             progress,
-            begin: isHorizontal ? 0.0 : 0.1,
-            end: isHorizontal ? 1.0 : 0.93,
+            begin: isHorizontal ? _hCollapseStart : _vCollapseStart,
+            end: isHorizontal ? _hCollapseEnd : _vCollapseEnd,
             curve: Curves.easeInOutCubic,
           )
         : segment(
             progress,
-            begin: isHorizontal ? 0.10 : 0.05,
-            end: isHorizontal ? 0.88 : 0.74,
+            begin: isHorizontal ? _hExpandStart : _vExpandStart,
+            end: isHorizontal ? _hExpandEnd : _vExpandEnd,
             curve: Curves.easeOutCubic,
           );
 
@@ -44,7 +134,7 @@ class ElasticSheetMotion {
             segment(
               progress,
               begin: 0.0,
-              end: isHorizontal ? 0.16 : 0.18,
+              end: isHorizontal ? _hAnticipationEnd : _vAnticipationEnd,
               curve: Curves.easeOutCubic,
             ),
             amplitude: _anticipationAmplitude(axis: axis, config: config),
@@ -53,11 +143,16 @@ class ElasticSheetMotion {
     final stretchProgress = isCollapsing
         ? segment(
             1 - progress,
-            begin: 0.10,
-            end: 0.52,
+            begin: _stretchCollapseStart,
+            end: _stretchCollapseEnd,
             curve: Curves.easeOutCubic,
           )
-        : segment(progress, begin: 0.52, end: 0.90, curve: Curves.easeOutCubic);
+        : segment(
+            progress,
+            begin: _stretchExpandStart,
+            end: _stretchExpandEnd,
+            curve: Curves.easeOutCubic,
+          );
 
     final stretch = _liquidStretchPulse(
       stretchProgress,
@@ -67,10 +162,12 @@ class ElasticSheetMotion {
     );
 
     return (base + anticipation + stretch).clamp(
-      isCollapsing ? 0.0 : -0.05,
+      isCollapsing ? 0.0 : _maxAnticipation,
       config.overshootClamp,
     );
   }
+
+  // ─── Overshoot pulse ───────────────────────────────────────────
 
   static double overshootPulse(
     double progress, {
@@ -89,13 +186,15 @@ class ElasticSheetMotion {
     final main = math.sin(t * math.pi) * amplitude;
     final settleT = segment(
       t,
-      begin: 0.58,
+      begin: _settleStart,
       end: 1.0,
       curve: Curves.easeOutCubic,
     );
-    final settle = math.sin(settleT * math.pi) * amplitude * 0.18;
+    final settle = math.sin(settleT * math.pi) * amplitude * _settleRatio;
     return 1.0 + main - settle;
   }
+
+  // ─── Axis rebound scale ────────────────────────────────────────
 
   static double axisReboundScale(
     double progress, {
@@ -114,26 +213,27 @@ class ElasticSheetMotion {
       );
 
       if (axis == ElasticSheetAxis.horizontal) {
-        return 1.0 + (pulse - 1.0) * 0.45;
+        return 1.0 + (pulse - 1.0) * _hSimultaneousReboundDamping;
       }
 
       return pulse;
     }
 
+    // Sequential cross-axis rebound profile.
     final motionProgress = isCollapsing ? 1.0 - progress : progress;
     final primaryAxis = isCollapsing
         ? ElasticSheetAxis.horizontal
         : ElasticSheetAxis.vertical;
     final firstPhase = segment(
       motionProgress,
-      begin: 0.56,
-      end: 0.78,
+      begin: _reboundFirstStart,
+      end: _reboundFirstEnd,
       curve: Curves.easeInOutCubic,
     );
     final secondPhase = segment(
       motionProgress,
-      begin: 0.74,
-      end: 0.98,
+      begin: _reboundSecondStart,
+      end: _reboundSecondEnd,
       curve: Curves.easeInOutCubic,
     );
     final activeAxisScale = _phaseReboundMultiplier(
@@ -145,8 +245,13 @@ class ElasticSheetMotion {
       amplitude: _counterCompressionAmplitude(axis: axis, config: config),
     );
 
-    return (activeAxisScale * counterAxisScale).clamp(0.88, 1.12);
+    return (activeAxisScale * counterAxisScale).clamp(
+      _reboundScaleMin,
+      _reboundScaleMax,
+    );
   }
+
+  // ─── Bottom-edge progress ──────────────────────────────────────
 
   static double bottomEdgeProgress(
     double progress, {
@@ -178,6 +283,8 @@ class ElasticSheetMotion {
         .clamp(0.0, 1.02);
   }
 
+  // ─── Radius progress ──────────────────────────────────────────
+
   static double radiusProgress(double progress, {required bool isCollapsing}) {
     final base = segment(
       progress,
@@ -203,6 +310,8 @@ class ElasticSheetMotion {
         .clamp(0.0, 1.03);
   }
 
+  // ─── Surface decoration progress ───────────────────────────────
+
   static double surfaceProgress(double progress, {required bool isCollapsing}) {
     return segment(
       progress,
@@ -211,6 +320,8 @@ class ElasticSheetMotion {
       curve: Curves.easeInOutCubic,
     );
   }
+
+  // ─── Content opacity helpers ───────────────────────────────────
 
   static double ctaOpacity(double progress) {
     return 1.0 -
@@ -222,6 +333,8 @@ class ElasticSheetMotion {
         ? segment(progress, begin: 0.68, end: 0.95, curve: Curves.easeOutCubic)
         : segment(progress, begin: 0.48, end: 0.84, curve: Curves.easeOutCubic);
   }
+
+  // ─── Segment utility ──────────────────────────────────────────
 
   static double segment(
     double value, {
@@ -238,6 +351,8 @@ class ElasticSheetMotion {
     return curve.transform((value - begin) / (end - begin));
   }
 
+  // ─── Private helpers ──────────────────────────────────────────
+
   static double _liquidStretchPulse(
     double progress, {
     required bool isHorizontal,
@@ -248,23 +363,23 @@ class ElasticSheetMotion {
       return 0.0;
     }
 
-    final envelope = math.pow(1 - progress, 1.35).toDouble();
+    final envelope = math.pow(1 - progress, _stretchDecay).toDouble();
     final main = math.sin(progress * math.pi) * envelope;
     final recoil =
         math.sin(progress * math.pi * 2.0) *
-        math.pow(1 - progress, 2.1).toDouble();
+        math.pow(1 - progress, _recoilDecay).toDouble();
     final hAmp = config.horizontalStretchAmplitude;
     final vAmp = config.verticalStretchAmplitude;
 
     if (isCollapsing) {
       return isHorizontal
-          ? (main * hAmp) + (recoil * hAmp * 0.21)
-          : -(main * vAmp) - (recoil * vAmp * 0.15);
+          ? (main * hAmp) + (recoil * hAmp * _hRecoilMix)
+          : -(main * vAmp) - (recoil * vAmp * _vRecoilMix);
     }
 
     return isHorizontal
-        ? -(main * hAmp) - (recoil * hAmp * 0.21)
-        : (main * vAmp) + (recoil * vAmp * 0.15);
+        ? -(main * hAmp) - (recoil * hAmp * _hRecoilMix)
+        : (main * vAmp) + (recoil * vAmp * _vRecoilMix);
   }
 
   static double _anticipationAmplitude({
@@ -284,7 +399,7 @@ class ElasticSheetMotion {
     if (progress <= 0 || progress >= 1 || amplitude <= 0) {
       return 0.0;
     }
-    final envelope = math.pow(1 - progress, 1.4).toDouble();
+    final envelope = math.pow(1 - progress, _anticipationDecay).toDouble();
     return -math.sin(progress * math.pi) * envelope * amplitude;
   }
 
@@ -292,7 +407,7 @@ class ElasticSheetMotion {
     if (progress <= 0 || progress >= 1) {
       return 0.0;
     }
-    final envelope = math.pow(1 - progress, 1.6).toDouble();
+    final envelope = math.pow(1 - progress, _dampedPulseDecay).toDouble();
     return math.sin(progress * math.pi) * envelope * amplitude;
   }
 
