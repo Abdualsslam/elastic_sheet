@@ -1,5 +1,5 @@
 name: elastic_sheet
-description: Elastic expand/collapse surface for Flutter with realistic showcase examples.
+description: A physics-driven Flutter surface for anchor-based expansion, liquid spring motion, dynamic sizing, and partial actions.
 topics:
   - animation
   - spring

@@ -3,6 +3,119 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elastic_sheet_example/main.dart';
 
 void main() {
+  testWidgets('Desktop playground presents a live demo layout', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(1440, 900));
+
+    await tester.pumpWidget(const MyApp());
+
+    expect(
+      find.byKey(const Key('playground_desktop_demo_layout')),
+      findsOneWidget,
+    );
+    expect(find.text('Elastic Sheet Playground'), findsOneWidget);
+    expect(find.text('Live Demo'), findsOneWidget);
+    expect(find.text('Live Surface'), findsOneWidget);
+    expect(find.text('Motion / Spring'), findsOneWidget);
+    expect(find.text('Size / Dimensions'), findsOneWidget);
+    expect(find.text('Timing'), findsOneWidget);
+    expect(find.text('Anchor / Placement'), findsOneWidget);
+    expect(find.text('Presets'), findsOneWidget);
+    expect(find.byKey(const Key('playground_surface_toggle')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Desktop playground keeps core controls in a short viewport', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(1440, 760));
+
+    await tester.pumpWidget(const MyApp());
+
+    expect(
+      find.byKey(const Key('playground_desktop_demo_layout')),
+      findsOneWidget,
+    );
+    _expectFinderInsideViewport(tester, find.text('Live Surface'));
+    _expectFinderInsideViewport(tester, find.text('Motion / Spring'));
+    _expectFinderInsideViewport(tester, find.text('Timing'));
+    _expectFinderInsideViewport(tester, find.text('Anchor / Placement'));
+    _expectFinderInsideViewport(tester, find.text('Size / Dimensions'));
+    _expectFinderInsideViewport(tester, find.text('Presets'));
+    _expectFinderInsideViewport(
+      tester,
+      find.byKey(const Key('playground_surface_toggle')),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Desktop playground surface toggles within surrounded controls', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(1440, 760));
+
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.byKey(const Key('playground_surface_toggle')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('playground_expanded_heading')),
+      findsOneWidget,
+    );
+    _expectFinderInsideViewport(tester, find.text('Motion / Spring'));
+    _expectFinderInsideViewport(tester, find.text('Anchor / Placement'));
+    _expectFinderInsideViewport(
+      tester,
+      find.byKey(const Key('playground_surface_toggle')),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Tablet playground uses preview-first two-column controls', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(900, 900));
+
+    await tester.pumpWidget(const MyApp());
+
+    expect(
+      find.byKey(const Key('playground_tablet_demo_layout')),
+      findsOneWidget,
+    );
+    expect(find.text('Live Surface'), findsOneWidget);
+    expect(find.text('Motion / Spring'), findsOneWidget);
+    expect(find.text('Anchor / Placement'), findsOneWidget);
+    expect(find.byKey(const Key('playground_surface_toggle')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Playground info buttons use info icons and tooltips', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.ensureVisible(
+      find.byKey(const Key('playground_info_overshoot')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.info_outline_rounded), findsWidgets);
+    expect(find.byTooltip('What is overshoot?'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('playground_info_overshoot')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('stretch beyond its target'), findsOneWidget);
+
+    await tester.tap(find.byType(TextButton));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('App shows the elastic sheet playground', (
     WidgetTester tester,
   ) async {
@@ -16,6 +129,8 @@ void main() {
   testWidgets('Playground surface toggles directly without a toggle button', (
     WidgetTester tester,
   ) async {
+    _setTestViewport(tester, const Size(390, 840));
+
     await tester.pumpWidget(const MyApp());
 
     expect(find.text('toggle  ↕'), findsNothing);
@@ -41,6 +156,8 @@ void main() {
   testWidgets('Playground size sliders update the expanded surface size', (
     WidgetTester tester,
   ) async {
+    _setTestViewport(tester, const Size(390, 840));
+
     await tester.pumpWidget(const MyApp());
 
     await tester.tap(find.byKey(const Key('playground_collapsed_label')));
@@ -92,6 +209,8 @@ void main() {
   testWidgets('Playground info icon shows the control description', (
     WidgetTester tester,
   ) async {
+    _setTestViewport(tester, const Size(390, 840));
+
     await tester.pumpWidget(const MyApp());
 
     await tester.ensureVisible(
@@ -114,7 +233,11 @@ void main() {
   testWidgets('Playground exposes and switches rebound profiles', (
     WidgetTester tester,
   ) async {
+    _setTestViewport(tester, const Size(390, 840));
+
     await tester.pumpWidget(const MyApp());
+    await tester.tap(find.byKey(const Key('playground_toggle_toast')));
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(
       find.byKey(const Key('playground_rebound_sequential')),
@@ -122,6 +245,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('playground_rebound_sequential')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('playground_rebound_simultaneous')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('playground_rebound_simultaneous')));
     await tester.pumpAndSettle();
@@ -133,6 +260,8 @@ void main() {
   testWidgets('Playground placement chips move the surface vertically', (
     WidgetTester tester,
   ) async {
+    _setTestViewport(tester, const Size(390, 840));
+
     await tester.pumpWidget(const MyApp());
 
     final hostFinder = find.byKey(const Key('playground_surface_host'));
@@ -162,6 +291,8 @@ void main() {
   testWidgets('Playground anchor changes direction without moving the button', (
     WidgetTester tester,
   ) async {
+    _setTestViewport(tester, const Size(390, 840));
+
     await tester.pumpWidget(const MyApp());
 
     final surfaceFinder = find
@@ -223,7 +354,9 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.byKey(const Key('playground_open_checkout_showcase')));
+    await tester.tap(
+      find.byKey(const Key('playground_open_checkout_showcase')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('checkout_showcase_page')), findsOneWidget);
@@ -564,6 +697,26 @@ Finder _unifiedShowcasePageScrollable() {
 String _textFieldValue(WidgetTester tester, Finder finder) {
   final field = tester.widget<TextField>(finder);
   return field.controller?.text ?? '';
+}
+
+void _setTestViewport(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+}
+
+void _expectFinderInsideViewport(WidgetTester tester, Finder finder) {
+  expect(finder, findsOneWidget);
+  final rect = tester.getRect(finder);
+  final viewport = tester.view.physicalSize / tester.view.devicePixelRatio;
+
+  expect(rect.top, greaterThanOrEqualTo(0));
+  expect(rect.left, greaterThanOrEqualTo(0));
+  expect(rect.bottom, lessThanOrEqualTo(viewport.height));
+  expect(rect.right, lessThanOrEqualTo(viewport.width));
 }
 
 void _expectRectsClose(Rect actual, Rect expected) {

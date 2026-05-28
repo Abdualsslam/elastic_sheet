@@ -5,6 +5,7 @@ import '../../elastic_sheet_checkout_showcase_page.dart';
 import '../../elastic_sheet_unified_showcase_page.dart';
 import 'playground_code_toast.dart';
 import 'playground_controls_panel.dart';
+import 'playground_demo_layout.dart';
 import 'playground_models.dart';
 import 'playground_surface_preview.dart';
 
@@ -21,6 +22,8 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
   static const double _defaultExpandedWidth = 320;
   static const double _defaultExpandedHeight = 350;
   static const double _bottomGap = 10;
+  static const double _desktopBreakpoint = 1100;
+  static const double _tabletBreakpoint = 760;
   static const double _defaultHorizontalStretch = 0.028;
   static const double _defaultVerticalStretch = 0.065;
 
@@ -189,6 +192,72 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
     super.dispose();
   }
 
+  Widget _buildPreview(BuildContext context, BoxConstraints constraints) {
+    return PlaygroundSurfacePreview(
+      isExpanded: _isExpanded,
+      anchor: _anchor,
+      config: _config,
+      collapsedSize: _collapsedSize,
+      expandedSize: _expandedSize,
+      surfaceHostWidth: _surfaceHostWidth,
+      surfaceHostHeight: _surfaceHostHeight,
+      hostLeft: _surfaceHostLeft(constraints.maxWidth),
+      hostTop: _surfaceHostTop(constraints.maxHeight),
+      onToggle: _toggle,
+    );
+  }
+
+  PlaygroundControlsPanel _buildControlsPanel() {
+    return PlaygroundControlsPanel(
+      collapsedWidth: _collapsedWidth,
+      collapsedHeight: _collapsedHeight,
+      expandedWidth: _expandedWidth,
+      expandedHeight: _expandedHeight,
+      stiffness: _stiffness,
+      damping: _damping,
+      mass: _mass,
+      overshootClamp: _overshootClamp,
+      expandDurationMs: _expandDurationMs,
+      collapseDurationMs: _collapseDurationMs,
+      reboundProfile: _reboundProfile,
+      anchor: _anchor,
+      placement: _placement,
+      onCollapsedWidth: (v) => setState(() => _collapsedWidth = v),
+      onCollapsedHeight: (v) => setState(() => _collapsedHeight = v),
+      onStiffness: (v) => _updateAndToast(
+        () => _stiffness = v,
+        PlaygroundChangedProp.stiffness,
+      ),
+      onDamping: (v) =>
+          _updateAndToast(() => _damping = v, PlaygroundChangedProp.damping),
+      onMass: (v) =>
+          _updateAndToast(() => _mass = v, PlaygroundChangedProp.mass),
+      onOvershootClamp: (v) => _updateAndToast(
+        () => _overshootClamp = v,
+        PlaygroundChangedProp.overshootClamp,
+      ),
+      onExpandedWidth: (v) => setState(() => _expandedWidth = v),
+      onExpandedHeight: (v) => setState(() => _expandedHeight = v),
+      onExpandDuration: (v) => _updateAndToast(
+        () => _expandDurationMs = v,
+        PlaygroundChangedProp.expandDuration,
+      ),
+      onCollapseDuration: (v) => _updateAndToast(
+        () => _collapseDurationMs = v,
+        PlaygroundChangedProp.collapseDuration,
+      ),
+      onReboundProfile: (v) => _updateAndToast(
+        () => _reboundProfile = v,
+        PlaygroundChangedProp.reboundProfile,
+      ),
+      onAnchor: (v) =>
+          _updateAndToast(() => _anchor = v, PlaygroundChangedProp.anchor),
+      onPlacement: (v) => setState(() => _placement = v),
+      onPreset: _applyPreset,
+      onReset: _resetToDefault,
+    );
+  }
+
   // ── build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -272,88 +341,136 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
         ),
         body: SafeArea(
           top: false,
-          child: Column(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: _placement == PlaygroundPlacement.bottom
-                        ? _bottomGap
-                        : 0,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= _desktopBreakpoint) {
+                return PlaygroundDesktopDemoLayout(
+                  previewBuilder: _buildPreview,
+                  isExpanded: _isExpanded,
+                  collapsedWidth: _collapsedWidth,
+                  collapsedHeight: _collapsedHeight,
+                  expandedWidth: _expandedWidth,
+                  expandedHeight: _expandedHeight,
+                  stiffness: _stiffness,
+                  damping: _damping,
+                  mass: _mass,
+                  overshootClamp: _overshootClamp,
+                  expandDurationMs: _expandDurationMs,
+                  collapseDurationMs: _collapseDurationMs,
+                  reboundProfile: _reboundProfile,
+                  anchor: _anchor,
+                  placement: _placement,
+                  onCollapsedWidth: (v) => setState(() => _collapsedWidth = v),
+                  onCollapsedHeight: (v) =>
+                      setState(() => _collapsedHeight = v),
+                  onStiffness: (v) => _updateAndToast(
+                    () => _stiffness = v,
+                    PlaygroundChangedProp.stiffness,
                   ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return PlaygroundSurfacePreview(
-                        isExpanded: _isExpanded,
-                        anchor: _anchor,
-                        config: _config,
-                        collapsedSize: _collapsedSize,
-                        expandedSize: _expandedSize,
-                        surfaceHostWidth: _surfaceHostWidth,
-                        surfaceHostHeight: _surfaceHostHeight,
-                        hostLeft: _surfaceHostLeft(constraints.maxWidth),
-                        hostTop: _surfaceHostTop(constraints.maxHeight),
-                        onToggle: _toggle,
-                      );
-                    },
+                  onDamping: (v) => _updateAndToast(
+                    () => _damping = v,
+                    PlaygroundChangedProp.damping,
                   ),
-                ),
-              ),
-              PlaygroundControlsPanel(
-                collapsedWidth: _collapsedWidth,
-                collapsedHeight: _collapsedHeight,
-                expandedWidth: _expandedWidth,
-                expandedHeight: _expandedHeight,
-                stiffness: _stiffness,
-                damping: _damping,
-                mass: _mass,
-                overshootClamp: _overshootClamp,
-                expandDurationMs: _expandDurationMs,
-                collapseDurationMs: _collapseDurationMs,
-                reboundProfile: _reboundProfile,
-                anchor: _anchor,
-                placement: _placement,
-                onCollapsedWidth: (v) => setState(() => _collapsedWidth = v),
-                onCollapsedHeight: (v) => setState(() => _collapsedHeight = v),
-                onStiffness: (v) => _updateAndToast(
-                  () => _stiffness = v,
-                  PlaygroundChangedProp.stiffness,
-                ),
-                onDamping: (v) => _updateAndToast(
-                  () => _damping = v,
-                  PlaygroundChangedProp.damping,
-                ),
-                onMass: (v) => _updateAndToast(
-                  () => _mass = v,
-                  PlaygroundChangedProp.mass,
-                ),
-                onOvershootClamp: (v) => _updateAndToast(
-                  () => _overshootClamp = v,
-                  PlaygroundChangedProp.overshootClamp,
-                ),
-                onExpandedWidth: (v) => setState(() => _expandedWidth = v),
-                onExpandedHeight: (v) => setState(() => _expandedHeight = v),
-                onExpandDuration: (v) => _updateAndToast(
-                  () => _expandDurationMs = v,
-                  PlaygroundChangedProp.expandDuration,
-                ),
-                onCollapseDuration: (v) => _updateAndToast(
-                  () => _collapseDurationMs = v,
-                  PlaygroundChangedProp.collapseDuration,
-                ),
-                onReboundProfile: (v) => _updateAndToast(
-                  () => _reboundProfile = v,
-                  PlaygroundChangedProp.reboundProfile,
-                ),
-                onAnchor: (v) => _updateAndToast(
-                  () => _anchor = v,
-                  PlaygroundChangedProp.anchor,
-                ),
-                onPlacement: (v) => setState(() => _placement = v),
-                onPreset: _applyPreset,
-                onReset: _resetToDefault,
-              ),
-            ],
+                  onMass: (v) => _updateAndToast(
+                    () => _mass = v,
+                    PlaygroundChangedProp.mass,
+                  ),
+                  onOvershootClamp: (v) => _updateAndToast(
+                    () => _overshootClamp = v,
+                    PlaygroundChangedProp.overshootClamp,
+                  ),
+                  onExpandedWidth: (v) => setState(() => _expandedWidth = v),
+                  onExpandedHeight: (v) => setState(() => _expandedHeight = v),
+                  onExpandDuration: (v) => _updateAndToast(
+                    () => _expandDurationMs = v,
+                    PlaygroundChangedProp.expandDuration,
+                  ),
+                  onCollapseDuration: (v) => _updateAndToast(
+                    () => _collapseDurationMs = v,
+                    PlaygroundChangedProp.collapseDuration,
+                  ),
+                  onReboundProfile: (v) => _updateAndToast(
+                    () => _reboundProfile = v,
+                    PlaygroundChangedProp.reboundProfile,
+                  ),
+                  onAnchor: (v) => _updateAndToast(
+                    () => _anchor = v,
+                    PlaygroundChangedProp.anchor,
+                  ),
+                  onPlacement: (v) => setState(() => _placement = v),
+                  onPreset: _applyPreset,
+                  onReset: _resetToDefault,
+                );
+              }
+
+              if (constraints.maxWidth >= _tabletBreakpoint) {
+                return PlaygroundTabletDemoLayout(
+                  previewBuilder: _buildPreview,
+                  isExpanded: _isExpanded,
+                  collapsedWidth: _collapsedWidth,
+                  collapsedHeight: _collapsedHeight,
+                  expandedWidth: _expandedWidth,
+                  expandedHeight: _expandedHeight,
+                  stiffness: _stiffness,
+                  damping: _damping,
+                  mass: _mass,
+                  overshootClamp: _overshootClamp,
+                  expandDurationMs: _expandDurationMs,
+                  collapseDurationMs: _collapseDurationMs,
+                  reboundProfile: _reboundProfile,
+                  anchor: _anchor,
+                  placement: _placement,
+                  onCollapsedWidth: (v) => setState(() => _collapsedWidth = v),
+                  onCollapsedHeight: (v) =>
+                      setState(() => _collapsedHeight = v),
+                  onStiffness: (v) => _updateAndToast(
+                    () => _stiffness = v,
+                    PlaygroundChangedProp.stiffness,
+                  ),
+                  onDamping: (v) => _updateAndToast(
+                    () => _damping = v,
+                    PlaygroundChangedProp.damping,
+                  ),
+                  onMass: (v) => _updateAndToast(
+                    () => _mass = v,
+                    PlaygroundChangedProp.mass,
+                  ),
+                  onOvershootClamp: (v) => _updateAndToast(
+                    () => _overshootClamp = v,
+                    PlaygroundChangedProp.overshootClamp,
+                  ),
+                  onExpandedWidth: (v) => setState(() => _expandedWidth = v),
+                  onExpandedHeight: (v) => setState(() => _expandedHeight = v),
+                  onExpandDuration: (v) => _updateAndToast(
+                    () => _expandDurationMs = v,
+                    PlaygroundChangedProp.expandDuration,
+                  ),
+                  onCollapseDuration: (v) => _updateAndToast(
+                    () => _collapseDurationMs = v,
+                    PlaygroundChangedProp.collapseDuration,
+                  ),
+                  onReboundProfile: (v) => _updateAndToast(
+                    () => _reboundProfile = v,
+                    PlaygroundChangedProp.reboundProfile,
+                  ),
+                  onAnchor: (v) => _updateAndToast(
+                    () => _anchor = v,
+                    PlaygroundChangedProp.anchor,
+                  ),
+                  onPlacement: (v) => setState(() => _placement = v),
+                  onPreset: _applyPreset,
+                  onReset: _resetToDefault,
+                );
+              }
+
+              return PlaygroundMobileDemoLayout(
+                bottomPadding: _placement == PlaygroundPlacement.bottom
+                    ? _bottomGap
+                    : 0,
+                preview: LayoutBuilder(builder: _buildPreview),
+                controls: _buildControlsPanel(),
+              );
+            },
           ),
         ),
       ),

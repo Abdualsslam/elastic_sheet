@@ -1,36 +1,56 @@
-# elastic_sheet
+# Elastic Sheet
 
 [![pub version](https://img.shields.io/pub/v/elastic_sheet.svg)](https://pub.dev/packages/elastic_sheet)
 [![likes](https://img.shields.io/pub/likes/elastic_sheet)](https://pub.dev/packages/elastic_sheet)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+A physics-driven Flutter surface that expands from its own anchor with liquid spring motion. Build compact buttons, floating action panels, composer bars, filters, checkout sections, and adaptive surfaces that grow in-place instead of opening as disconnected modals.
+
+<p align="center">
+  <a href="https://abdualsslam.github.io/elastic_sheet/"><strong>Open Live Demo</strong></a>
+  ·
+  <a href="https://github.com/Abdualsslam/elastic_sheet/tree/main/example">Example Source</a>
+  ·
+  <a href="https://pub.dev/packages/elastic_sheet">pub.dev</a>
+</p>
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/Abdualsslam/elastic_sheet/main/doc/Care%20Desk%20showcase.gif" alt="Care Desk showcase" height="450" />
 </p>
 
-`elastic_sheet` is a Flutter widget for building realistic expand/collapse surfaces with a liquid spring feel.
+## Live Demo
 
-It is designed for inline actions, drawers, search affordances, composer bars, and other UI pieces that should feel like one surface stretching into another, not a modal abruptly appearing on top.
+Try the interactive Elastic Sheet Playground directly in your browser:
+
+[Open Live Demo](https://abdualsslam.github.io/elastic_sheet/)
+
+The demo is powered by the same Flutter example app under:
+
+```text
+example/lib/src/elastic_sheet_playground.dart
+```
+
+It lets you tune stiffness, damping, mass, overshoot, durations, rebound profile, anchors, placement, and collapsed/expanded sizes while seeing the result instantly.
 
 ## Showcase
 
 | Feature | Description | Preview |
 | :--- | :--- | :---: |
-| **Spring Presets** | Completely configurable spring physics, ranging from snappy drawer snaps to gentle floating surfaces. | <img src="https://raw.githubusercontent.com/Abdualsslam/elastic_sheet/main/doc/presets.gif" width="220" alt="Presets" /> |
-| **Anchor (Compact)** | 9-point anchor system allows components to expand naturally from corners and edges without disrupting layout. | <img src="https://raw.githubusercontent.com/Abdualsslam/elastic_sheet/main/doc/anchor%20compact.gif" width="220" alt="Anchor Compact" /> |
-| **Anchor (Grid)** | Maintains layout integrity for multi-directional expansions, ideal for grids, cards, and complex responsive blocks. | <img src="https://raw.githubusercontent.com/Abdualsslam/elastic_sheet/main/doc/anchor%20grid.gif" width="220" alt="Anchor Grid" /> |
+| **Spring Presets** | Switch between tuned motion profiles from gentle to snappy. | <img src="https://raw.githubusercontent.com/Abdualsslam/elastic_sheet/main/doc/presets.gif" width="220" alt="Presets" /> |
+| **Anchor (Compact)** | Expand naturally from corners, edges, or center without disrupting the surrounding UI. | <img src="https://raw.githubusercontent.com/Abdualsslam/elastic_sheet/main/doc/anchor%20compact.gif" width="220" alt="Anchor Compact" /> |
+| **Anchor (Grid)** | Keep complex layouts visually stable while surfaces grow from their original position. | <img src="https://raw.githubusercontent.com/Abdualsslam/elastic_sheet/main/doc/anchor%20grid.gif" width="220" alt="Anchor Grid" /> |
 
 ## Features
 
-- Declarative API with `isExpanded`
-- Controller-based API with `ElasticSheetController`
-- Configurable spring tuning via `ElasticSheetConfig`
-- Optional rebound profiles, including a sequential cross-axis stretch
-- 9-point anchors for fixed-size expansion, from `topLeft` to `bottomRight`
-- Content states for `ready`, `pending`, and `unavailable`
-- Legacy `top`, `center`, and `bottom` origins still supported
-- Fixed and measured dynamic expanded sizing
-- Runnable example app under [`example/`](example)
+- Expand from any of 9 anchors: corners, edges, or center.
+- Spring-based motion with configurable stiffness, damping, mass, and overshoot.
+- Built-in motion presets: gentle, bouncy, natural, and snappy.
+- Fixed or dynamic expanded sizing.
+- Declarative `isExpanded` API.
+- Controller-based API through `ElasticSheetController`.
+- Partial child actions through `ElasticSheetActions`.
+- Content states for ready, pending, and unavailable surfaces.
+- Production-style example app and browser playground.
 
 ## Installation
 
@@ -42,42 +62,23 @@ dependencies:
 ## Usage
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:elastic_sheet/elastic_sheet.dart';
-
-class DemoCard extends StatefulWidget {
-  const DemoCard({super.key});
-
-  @override
-  State<DemoCard> createState() => _DemoCardState();
-}
-
-class _DemoCardState extends State<DemoCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => setState(() => _isExpanded = !_isExpanded),
-      child: ElasticSheet(
-        isExpanded: _isExpanded,
-        anchor: ElasticSheetAnchor.bottomCenter,
-        config: const ElasticSheetConfig.gentle(),
-        collapsedSize: const Size(220, 52),
-        expandedSize: const Size(320, 320),
-        expandedSizing: ElasticSheetExpandedSizing.dynamicHeight,
-        collapsedChild: const Center(child: Text('Open')),
-        expandedChild: const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Expanded content'),
-        ),
-      ),
-    );
-  }
-}
+ElasticSheet(
+  isExpanded: isExpanded,
+  anchor: ElasticSheetAnchor.bottomCenter,
+  config: const ElasticSheetConfig.natural(),
+  collapsedSize: const Size(220, 52),
+  expandedSize: const Size(320, 280),
+  collapsedChild: const Center(child: Text('Open')),
+  expandedChild: const Padding(
+    padding: EdgeInsets.all(20),
+    child: Text('Expanded content'),
+  ),
+)
 ```
 
 ## Controller API
+
+Use `ElasticSheetController` when the surface should be opened, closed, toggled, or pulsed from outside the widget.
 
 ```dart
 late final ElasticSheetController controller;
@@ -98,7 +99,7 @@ void dispose() {
 }
 ```
 
-Then use:
+Then render a controlled sheet:
 
 ```dart
 ElasticSheet.controlled(
@@ -111,17 +112,26 @@ ElasticSheet.controlled(
 )
 ```
 
-You can also opt into a more natural late-stage rebound:
+## Anchors
+
+Use `anchor` to keep a specific edge or corner fixed while the surface grows:
 
 ```dart
-const config = ElasticSheetConfig.natural();
+ElasticSheet(
+  isExpanded: isOpen,
+  anchor: ElasticSheetAnchor.topRight,
+  collapsedSize: const Size(180, 48),
+  expandedSize: const Size(320, 280),
+  collapsedChild: const Text('Filters'),
+  expandedChild: const Text('Expanded content'),
+)
 ```
+
+For `ElasticSheetExpandedSizing.dynamicHeight`, the horizontal part of the anchor is normalized to the center column, so `topLeft` and `topRight` behave like `topCenter`.
 
 ## Partial Triggers
 
-`ElasticSheet.controlled` injects `ElasticSheetActions` around its collapsed
-and expanded content. That lets any descendant open, close, toggle, or pulse
-the surface without turning the whole `collapsedChild` into one large button.
+`ElasticSheet.controlled` injects `ElasticSheetActions` around collapsed and expanded content. Any descendant can open, close, toggle, or pulse the surface without turning the whole child into one large button.
 
 ```dart
 ElasticSheet.controlled(
@@ -132,12 +142,9 @@ ElasticSheet.controlled(
   collapsedChild: Builder(
     builder: (context) => Row(
       children: [
-        Expanded(child: TextField(controller: draftController)),
+        const Expanded(child: TextField()),
         IconButton(
-          onPressed: () {
-            FocusManager.instance.primaryFocus?.unfocus();
-            ElasticSheetActions.of(context).expand();
-          },
+          onPressed: () => ElasticSheetActions.of(context).expand(),
           icon: const Icon(Icons.add_rounded),
         ),
       ],
@@ -146,25 +153,6 @@ ElasticSheet.controlled(
   expandedChild: const Text('Composer actions'),
 )
 ```
-
-## Anchors
-
-Use `anchor` to keep a specific edge or corner fixed while the surface grows:
-
-```dart
-ElasticSheet(
-  isExpanded: _open,
-  anchor: ElasticSheetAnchor.topRight,
-  collapsedSize: const Size(180, 48),
-  expandedSize: const Size(320, 280),
-  collapsedChild: const Text('Filters'),
-  expandedChild: const Text('Expanded content'),
-)
-```
-
-For `ElasticSheetExpandedSizing.dynamicHeight`, the horizontal part of the
-anchor is ignored so `topLeft` and `topRight` both behave like `topCenter`,
-and the same applies to the `center` and `bottom` rows.
 
 ## Content States
 
@@ -176,7 +164,7 @@ ElasticSheet(
   contentState: ElasticSheetContentState.pending,
   collapsedSize: const Size(180, 48),
   collapsedChild: const Text('Waiting for slot data'),
-  onPendingTap: _reloadSlots,
+  onPendingTap: reloadSlots,
 )
 ```
 
@@ -184,7 +172,33 @@ ElasticSheet(
 - `pending`: no expanded content yet. The surface stays collapsed and plays a subtle pulse on tap.
 - `unavailable`: visible but disabled. No pulse and no expansion.
 
-## Example app
+## Example App
 
-The runnable showcase lives in [`example/`](example). It contains the playground plus several realistic scenarios that import the package exactly as an external consumer would.
+The runnable showcase lives in [`example/`](example). It imports `elastic_sheet` the same way a package consumer would and includes:
 
+- Interactive playground with live spring controls.
+- Responsive browser demo for GitHub Pages.
+- Care Desk unified showcase.
+- Checkout showcase.
+
+Run it locally:
+
+```bash
+cd example
+flutter run -d chrome
+```
+
+## Deploy Live Demo
+
+The GitHub Pages workflow builds the example app with:
+
+```bash
+cd example
+flutter build web --release --base-href "/elastic_sheet/"
+```
+
+In GitHub repository settings, configure Pages to use **GitHub Actions** as the source. The workflow publishes `example/build/web`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
