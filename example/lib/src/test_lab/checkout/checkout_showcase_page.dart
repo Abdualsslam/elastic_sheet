@@ -279,27 +279,51 @@ class _ElasticSheetCheckoutShowcasePageState
   }
 
   Widget _buildInteractiveStack() {
-    // Address and shipping use push accordion behavior so long forms stay
-    // readable. Payment floats above the docked invoice to demonstrate that
-    // nearby checkout content does not always need to move.
     double currentTop = 0;
     final List<double> calculatedTops = [];
+    double maxExtent = 0;
 
-    // Card 0 (Address)
-    calculatedTops.add(currentTop);
-    currentTop += _addressExpanded ? (356 + 16) : 88;
+    final behaviors = [
+      CheckoutSheetBehavior.push,
+      CheckoutSheetBehavior.push,
+      CheckoutSheetBehavior.floating,
+      CheckoutSheetBehavior.docked,
+    ];
+    final expandedStates = [
+      _addressExpanded,
+      _shippingExpanded,
+      _paymentExpanded,
+      _invoiceExpanded,
+    ];
+    final expandedHeights = [356.0, 320.0, 360.0, 390.0];
+    const double collapsedHeight = 72.0;
+    const double spacing = 16.0;
 
-    // Card 1 (Shipping)
-    calculatedTops.add(currentTop);
-    currentTop += _shippingExpanded ? (320 + 16) : 88;
+    for (int i = 0; i < 4; i++) {
+      calculatedTops.add(currentTop);
 
-    // Card 2 (Payment) floats over the invoice when expanded.
-    calculatedTops.add(currentTop);
-    currentTop += 88;
+      final behavior = behaviors[i];
+      final isExpanded = expandedStates[i];
+      final expHeight = expandedHeights[i];
 
-    // Card 3 (Docked invoice summary)
-    calculatedTops.add(currentTop);
-    currentTop += _invoiceExpanded ? 390 : 72;
+      double itemHeightContribution = 0;
+      final double visualHeight = isExpanded ? expHeight : collapsedHeight;
+
+      if (behavior == CheckoutSheetBehavior.push) {
+        itemHeightContribution = visualHeight + spacing;
+      } else if (behavior == CheckoutSheetBehavior.floating) {
+        itemHeightContribution = collapsedHeight + spacing;
+      } else if (behavior == CheckoutSheetBehavior.docked) {
+        itemHeightContribution = visualHeight;
+      }
+
+      currentTop += itemHeightContribution;
+
+      final double itemBottom = calculatedTops[i] + visualHeight;
+      if (itemBottom > maxExtent) {
+        maxExtent = itemBottom;
+      }
+    }
 
     final items = [
       StackedSectionData(
@@ -307,6 +331,7 @@ class _ElasticSheetCheckoutShowcasePageState
         top: calculatedTops[0],
         isExpanded: _addressExpanded,
         expandedHeight: 356,
+        behavior: CheckoutSheetBehavior.push,
         child: _buildAddressSection(),
       ),
       StackedSectionData(
@@ -314,6 +339,7 @@ class _ElasticSheetCheckoutShowcasePageState
         top: calculatedTops[1],
         isExpanded: _shippingExpanded,
         expandedHeight: 320,
+        behavior: CheckoutSheetBehavior.push,
         child: _buildShippingSection(),
       ),
       StackedSectionData(
@@ -321,6 +347,7 @@ class _ElasticSheetCheckoutShowcasePageState
         top: calculatedTops[2],
         isExpanded: _paymentExpanded,
         expandedHeight: 360,
+        behavior: CheckoutSheetBehavior.floating,
         child: _buildPaymentSection(),
       ),
       StackedSectionData(
@@ -328,16 +355,33 @@ class _ElasticSheetCheckoutShowcasePageState
         top: calculatedTops[3],
         isExpanded: _invoiceExpanded,
         expandedHeight: 390,
+        behavior: CheckoutSheetBehavior.docked,
         child: _buildInvoiceSection(),
       ),
     ];
 
-    final paintOrder = [items[3], items[1], items[0], items[2]];
+    // Build the dynamic paint order:
+    // Non-active floating / regular items first, active floating items last.
+    final basePaintOrder = [items[3], items[1], items[0], items[2]];
+    final List<StackedSectionData> paintOrder = [];
+
+    // 1. Draw non-active floating and other items
+    for (final item in basePaintOrder) {
+      if (!(item.behavior == CheckoutSheetBehavior.floating && item.isExpanded)) {
+        paintOrder.add(item);
+      }
+    }
+    // 2. Draw active floating items on top
+    for (final item in basePaintOrder) {
+      if (item.behavior == CheckoutSheetBehavior.floating && item.isExpanded) {
+        paintOrder.add(item);
+      }
+    }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
-      height: currentTop,
+      height: maxExtent,
       child: Stack(
         clipBehavior: Clip.none,
         children: paintOrder.map((item) {

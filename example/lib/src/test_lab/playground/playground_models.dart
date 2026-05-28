@@ -20,26 +20,37 @@ const List<List<ElasticSheetAnchor>> playgroundAnchorGrid = [
   ],
 ];
 
-const String playgroundCollapsedLabelText = 'بيانات الطلب';
-const String playgroundExpandedHeadingText = 'معلومات الحساب';
-const String playgroundConfirmPaymentText = 'تأكيد الدفع';
+enum PlaygroundChangedProp {
+  stiffness,
+  damping,
+  mass,
+  overshootClamp,
+  expandDuration,
+  collapseDuration,
+  reboundProfile,
+  anchor,
+}
+
+const String playgroundCollapsedLabelText = 'Order Details';
+const String playgroundExpandedHeadingText = 'Account Information';
+const String playgroundConfirmPaymentText = 'Confirm Payment';
 const String playgroundOvershootDescriptionText =
-    'يحدد مقدار السماح بتجاوز الحجم المستهدف أثناء الحركة. رفعه يزيد الارتداد والامتلاء البصري.';
+    'Defines the overshoot clamp amplitude during the spring transition. Raising it yields extra stretch.';
 const String playgroundExpandedWidthDescriptionText =
-    'يحدد العرض النهائي للقطعة عندما تكون في الحالة المتمددة.';
+    'Defines the expanded width of the sheet.';
 const String playgroundExpandedHeightDescriptionText =
-    'يحدد الارتفاع النهائي للقطعة عندما تكون في الحالة المتمددة.';
+    'Defines the expanded height of the sheet.';
 const String playgroundExpandDescriptionText =
-    'مدة فتح القطعة بالملي ثانية. القيم الأكبر تعطي فتحاً أبطأ وأكثر هدوءاً.';
+    'Duration of the expansion animation in milliseconds.';
 const String playgroundCollapseDescriptionText =
-    'مدة إغلاق القطعة بالملي ثانية. القيم الأكبر تعطي إغلاقاً أبطأ وأكثر سلاسة.';
+    'Duration of the collapse animation in milliseconds.';
 const String playgroundButtonWidthDescriptionText =
-    'يتحكم في عرض الزر الأساسي قبل التمدد داخل صفحة المثال.';
+    'Controls the collapsed width (button width) in the preview.';
 const String playgroundButtonHeightDescriptionText =
-    'يتحكم في ارتفاع الزر الأساسي قبل التمدد داخل صفحة المثال.';
+    'Controls the collapsed height (button height) in the preview.';
 const String playgroundPlacementDescriptionText =
-    'يحدد موضع القطعة داخل مساحة العرض في المثال: أعلى أو وسط أو أسفل.';
-const String playgroundCloseDialogText = 'إغلاق';
+    'Defines the layout placement of the sheet within the screen.';
+const String playgroundCloseDialogText = 'Close';
 const String playgroundReboundDescriptionText =
     'Choose how the late rebound travels across the surface. Sequential cross-axis transfers tension vertically first on open, then horizontally, and reverses the order on collapse.';
 const String playgroundAnchorDescriptionText =

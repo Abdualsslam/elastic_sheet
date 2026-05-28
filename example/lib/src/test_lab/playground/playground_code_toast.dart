@@ -1,17 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:elastic_sheet/elastic_sheet.dart';
-
-/// The property that just changed — used to highlight the right line.
-enum _ChangedProp {
-  stiffness,
-  damping,
-  mass,
-  overshootClamp,
-  expandDuration,
-  collapseDuration,
-  reboundProfile,
-  anchor,
-}
+import 'playground_models.dart';
 
 /// Shows a floating dark code-editor toast at the top of the screen
 /// whenever a config value changes.
@@ -54,10 +43,12 @@ class PlaygroundCodeToast {
     _current = entry;
     overlay.insert(entry);
   }
-}
 
-/// Public alias so callers don't import the private enum.
-typedef PlaygroundChangedProp = _ChangedProp;
+  static void dismiss() {
+    _current?.remove();
+    _current = null;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -70,7 +61,7 @@ class _CodeToastWidget extends StatefulWidget {
   });
 
   final ElasticSheetConfig config;
-  final _ChangedProp changedProp;
+  final PlaygroundChangedProp changedProp;
   final ElasticSheetAnchor anchor;
   final VoidCallback onDismissed;
 
@@ -160,8 +151,9 @@ class _CodeCard extends StatelessWidget {
   });
 
   final ElasticSheetConfig config;
-  final _ChangedProp changedProp;
+  final PlaygroundChangedProp changedProp;
   final ElasticSheetAnchor anchor;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -206,38 +198,38 @@ class _CodeCard extends StatelessWidget {
               ),
               const Spacer(),
               // blinking cursor dot
-              _BlinkingDot(),
+              const _BlinkingDot(),
             ],
           ),
           const SizedBox(height: 10),
           // code lines
           _CodeLine(
-            prop: _ChangedProp.stiffness,
+            prop: PlaygroundChangedProp.stiffness,
             label: 'stiffness',
             value: config.stiffness.toStringAsFixed(0),
             changedProp: changedProp,
             isFirst: true,
           ),
           _CodeLine(
-            prop: _ChangedProp.damping,
+            prop: PlaygroundChangedProp.damping,
             label: 'damping',
             value: config.damping.toStringAsFixed(1),
             changedProp: changedProp,
           ),
           _CodeLine(
-            prop: _ChangedProp.mass,
+            prop: PlaygroundChangedProp.mass,
             label: 'mass',
             value: config.mass.toStringAsFixed(2),
             changedProp: changedProp,
           ),
           _CodeLine(
-            prop: _ChangedProp.overshootClamp,
+            prop: PlaygroundChangedProp.overshootClamp,
             label: 'overshootClamp',
             value: config.overshootClamp.toStringAsFixed(2),
             changedProp: changedProp,
           ),
           _CodeLine(
-            prop: _ChangedProp.expandDuration,
+            prop: PlaygroundChangedProp.expandDuration,
             label: 'expandDuration',
             value:
                 'Duration(milliseconds: ${config.expandDuration.inMilliseconds})',
@@ -245,7 +237,7 @@ class _CodeCard extends StatelessWidget {
             isDuration: true,
           ),
           _CodeLine(
-            prop: _ChangedProp.collapseDuration,
+            prop: PlaygroundChangedProp.collapseDuration,
             label: 'collapseDuration',
             value:
                 'Duration(milliseconds: ${config.collapseDuration.inMilliseconds})',
@@ -253,15 +245,14 @@ class _CodeCard extends StatelessWidget {
             isDuration: true,
           ),
           _CodeLine(
-            prop: _ChangedProp.reboundProfile,
+            prop: PlaygroundChangedProp.reboundProfile,
             label: 'reboundProfile',
             value: 'ElasticSheetReboundProfile.${config.reboundProfile.name}',
             changedProp: changedProp,
             isEnum: true,
-            isLast: true,
           ),
           _CodeLine(
-            prop: _ChangedProp.anchor,
+            prop: PlaygroundChangedProp.anchor,
             label: 'anchor',
             value: 'ElasticSheetAnchor.${anchor.name}',
             changedProp: changedProp,
@@ -288,10 +279,10 @@ class _CodeLine extends StatelessWidget {
     this.isEnum = false,
   });
 
-  final _ChangedProp prop;
+  final PlaygroundChangedProp prop;
   final String label;
   final String value;
-  final _ChangedProp changedProp;
+  final PlaygroundChangedProp changedProp;
   final bool isFirst;
   final bool isLast;
   final bool isDuration;
@@ -362,11 +353,7 @@ class _CodeLine extends StatelessWidget {
                   ),
                   // value
                   TextSpan(
-                    text: isEnum
-                        ? value
-                        : isDuration
-                        ? value
-                        : value,
+                    text: value,
                     style: TextStyle(
                       color: isEnum
                           ? const Color(0xFFA6E3A1)
@@ -416,6 +403,8 @@ class _CodeLine extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _BlinkingDot extends StatefulWidget {
+  const _BlinkingDot();
+
   @override
   State<_BlinkingDot> createState() => _BlinkingDotState();
 }

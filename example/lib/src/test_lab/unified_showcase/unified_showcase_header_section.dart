@@ -43,7 +43,7 @@ class UnifiedShowcaseHeaderSection extends StatelessWidget {
     const filterAccent = Color(0xFF0F766E);
 
     return SizedBox(
-      height: 340,
+      height: 356,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: const LinearGradient(

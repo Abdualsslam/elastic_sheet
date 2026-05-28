@@ -26,12 +26,4 @@ BoxDecoration calendarSurfaceDecoration(Color accent, Color tint) =>
     BoxDecoration(
       color: tint,
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: accent.withAlpha(24)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0F000000),
-          blurRadius: 12,
-          offset: Offset(0, 6),
-        ),
-      ],
     );

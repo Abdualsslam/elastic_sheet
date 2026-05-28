@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:elastic_sheet/elastic_sheet.dart';
 
+import '../../elastic_sheet_checkout_showcase_page.dart';
 import '../../elastic_sheet_unified_showcase_page.dart';
 import 'playground_code_toast.dart';
 import 'playground_controls_panel.dart';
@@ -38,7 +39,7 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
   int _collapseDurationMs = 600;
   ElasticSheetReboundProfile _reboundProfile =
       ElasticSheetReboundProfile.simultaneous;
-  ElasticSheetAnchor _anchor = ElasticSheetAnchor.bottomCenter;
+  ElasticSheetAnchor _anchor = ElasticSheetAnchor.center;
   PlaygroundPlacement _placement = PlaygroundPlacement.center;
 
   Size get _collapsedSize => Size(_collapsedWidth, _collapsedHeight);
@@ -125,7 +126,12 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
   void _updateAndToast(VoidCallback update, PlaygroundChangedProp prop) {
     setState(update);
     if (_showToast) {
-      PlaygroundCodeToast.show(context, config: _config, changedProp: prop, anchor: _anchor);
+      PlaygroundCodeToast.show(
+        context,
+        config: _config,
+        changedProp: prop,
+        anchor: _anchor,
+      );
     }
   }
 
@@ -151,16 +157,54 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
     }
   }
 
+  void _resetToDefault() {
+    setState(() {
+      _collapsedWidth = _defaultCollapsedWidth;
+      _collapsedHeight = _defaultCollapsedHeight;
+      _expandedWidth = _defaultExpandedWidth;
+      _expandedHeight = _defaultExpandedHeight;
+      _stiffness = 220;
+      _damping = 18;
+      _mass = 1.0;
+      _overshootClamp = 1.03;
+      _expandDurationMs = 600;
+      _collapseDurationMs = 600;
+      _reboundProfile = ElasticSheetReboundProfile.simultaneous;
+      _anchor = ElasticSheetAnchor.center;
+      _placement = PlaygroundPlacement.center;
+    });
+    if (_showToast) {
+      PlaygroundCodeToast.show(
+        context,
+        config: _config,
+        changedProp: PlaygroundChangedProp.stiffness,
+        anchor: _anchor,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    PlaygroundCodeToast.dismiss();
+    super.dispose();
+  }
+
   // ── build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final themeData = _isDark ? ThemeData.dark() : ThemeData.light();
-    
+    final themeData = _isDark
+        ? ThemeData.dark().copyWith(
+            scaffoldBackgroundColor: const Color(0xFF0F172A),
+          )
+        : ThemeData.light().copyWith(
+            scaffoldBackgroundColor: const Color(0xFFF9FAFB),
+          );
+
     return Theme(
       data: themeData,
       child: Scaffold(
-        backgroundColor: _isDark ? const Color(0xFF0F172A) : const Color(0xFFF9FAFB),
+        backgroundColor: themeData.scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -182,7 +226,9 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
               onPressed: () => setState(() => _showToast = !_showToast),
               icon: Icon(
                 _showToast ? Icons.code_rounded : Icons.code_off_rounded,
-                color: _isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563),
+                color: _isDark
+                    ? const Color(0xFFD1D5DB)
+                    : const Color(0xFF4B5563),
               ),
             ),
             IconButton(
@@ -191,7 +237,9 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
               onPressed: () => setState(() => _isDark = !_isDark),
               icon: Icon(
                 _isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                color: _isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563),
+                color: _isDark
+                    ? const Color(0xFFD1D5DB)
+                    : const Color(0xFF4B5563),
               ),
             ),
             IconButton(
@@ -202,7 +250,22 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
               ).pushNamed(ElasticSheetUnifiedShowcasePage.routeName),
               icon: Icon(
                 Icons.dashboard_customize_rounded,
-                color: _isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563),
+                color: _isDark
+                    ? const Color(0xFFD1D5DB)
+                    : const Color(0xFF4B5563),
+              ),
+            ),
+            IconButton(
+              key: const Key('playground_open_checkout_showcase'),
+              tooltip: 'Checkout showcase',
+              onPressed: () => Navigator.of(
+                context,
+              ).pushNamed(ElasticSheetCheckoutShowcasePage.routeName),
+              icon: Icon(
+                Icons.shopping_cart_rounded,
+                color: _isDark
+                    ? const Color(0xFFD1D5DB)
+                    : const Color(0xFF4B5563),
               ),
             ),
           ],
@@ -260,8 +323,10 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
                   () => _damping = v,
                   PlaygroundChangedProp.damping,
                 ),
-                onMass: (v) =>
-                    _updateAndToast(() => _mass = v, PlaygroundChangedProp.mass),
+                onMass: (v) => _updateAndToast(
+                  () => _mass = v,
+                  PlaygroundChangedProp.mass,
+                ),
                 onOvershootClamp: (v) => _updateAndToast(
                   () => _overshootClamp = v,
                   PlaygroundChangedProp.overshootClamp,
@@ -286,6 +351,7 @@ class _ElasticSheetPlaygroundState extends State<ElasticSheetPlayground> {
                 ),
                 onPlacement: (v) => setState(() => _placement = v),
                 onPreset: _applyPreset,
+                onReset: _resetToDefault,
               ),
             ],
           ),

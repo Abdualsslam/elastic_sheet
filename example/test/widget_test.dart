@@ -9,7 +9,7 @@ void main() {
     await tester.pumpWidget(const MyApp());
 
     expect(find.byType(MaterialApp), findsOneWidget);
-    expect(find.text('Elastic Sheet Playground'), findsOneWidget);
+    expect(find.text('Elastic Sheet'), findsOneWidget);
     expect(find.byType(Slider), findsWidgets);
   });
 
@@ -202,7 +202,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Playground only exposes the grouped showcase entry', (
+  testWidgets('Playground exposes the unified and checkout showcase entries', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MyApp());
@@ -212,6 +212,22 @@ void main() {
       find.byKey(const Key('playground_open_unified_showcase')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('playground_open_checkout_showcase')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Playground opens the checkout showcase route', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.byKey(const Key('playground_open_checkout_showcase')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('checkout_showcase_page')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Playground opens the unified showcase route', (
@@ -393,14 +409,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _tapBackdropAtSafeSpot(tester, backdrop);
+
+    expect(backdrop, findsNothing);
+
     final labelFinder = find.byKey(
       const Key('unified_showcase_top_filter_label'),
     );
     expect(tester.widget<Text>(labelFinder).data, 'Lab results');
-
-    await _tapBackdropAtSafeSpot(tester, backdrop);
-
-    expect(backdrop, findsNothing);
     expect(tester.takeException(), isNull);
   });
 

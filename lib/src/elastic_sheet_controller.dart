@@ -57,7 +57,7 @@ class ElasticSheetController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Raw [0..1] animation value - useful for driving other animations.
+  /// Raw `0..1` animation value — useful for driving other animations.
   double get value => _animationController.value;
 
   /// Whether the surface is currently expanding or is fully expanded.

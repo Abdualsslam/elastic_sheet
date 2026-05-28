@@ -7,6 +7,7 @@
 // - Multiple real-world scenarios
 
 import 'package:flutter/material.dart';
+import 'src/elastic_sheet_checkout_showcase_page.dart';
 import 'src/elastic_sheet_playground.dart';
 import 'src/elastic_sheet_unified_showcase_page.dart';
 
@@ -26,6 +27,8 @@ class MyApp extends StatelessWidget {
       routes: {
         ElasticSheetUnifiedShowcasePage.routeName: (_) =>
             const ElasticSheetUnifiedShowcasePage(),
+        ElasticSheetCheckoutShowcasePage.routeName: (_) =>
+            const ElasticSheetCheckoutShowcasePage(),
       },
       home: const ElasticSheetPlayground(),
     );

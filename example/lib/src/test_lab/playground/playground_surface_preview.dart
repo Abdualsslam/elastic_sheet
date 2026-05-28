@@ -37,6 +37,55 @@ class PlaygroundSurfacePreview extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Positioned(
+          top: 16,
+          right: 16,
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: 0.85,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark ? const Color(0x33000000) : const Color(0x0A000000),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.05),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.touch_app_rounded,
+                      size: 14,
+                      color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isExpanded ? 'Tap to Collapse' : 'Tap to Expand',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF374151),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
           left: hostLeft,
           top: hostTop,
           width: surfaceHostWidth,
@@ -216,15 +265,43 @@ class PlaygroundExpandedContent extends StatelessWidget {
     );
   }
 
-  Widget _placeholder(double height, bool isDark) => Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF9FAFB),
-            width: 2,
-          ),
+  Widget _placeholder(double height, bool isDark) {
+    final baseColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF3F4F6);
+    final lineColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE5E7EB);
+    return Container(
+      height: height,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: baseColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF9FAFB),
+          width: 2,
         ),
-      );
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 140,
+            height: 10,
+            decoration: BoxDecoration(
+              color: lineColor,
+              borderRadius: BorderRadius.circular(5),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: 90,
+            height: 8,
+            decoration: BoxDecoration(
+              color: lineColor.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

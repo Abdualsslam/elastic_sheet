@@ -33,6 +33,7 @@ class PlaygroundControlsPanel extends StatelessWidget {
     required this.onAnchor,
     required this.onPlacement,
     required this.onPreset,
+    required this.onReset,
   });
 
   final double collapsedWidth;
@@ -62,10 +63,21 @@ class PlaygroundControlsPanel extends StatelessWidget {
   final ValueChanged<ElasticSheetAnchor> onAnchor;
   final ValueChanged<PlaygroundPlacement> onPlacement;
   final ValueChanged<ElasticSheetConfig> onPreset;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    bool isPresetSelected(ElasticSheetConfig preset) {
+      return stiffness == preset.stiffness &&
+          damping == preset.damping &&
+          mass == preset.mass &&
+          overshootClamp == preset.overshootClamp &&
+          expandDurationMs == preset.expandDuration.inMilliseconds &&
+          collapseDurationMs == preset.collapseDuration.inMilliseconds &&
+          reboundProfile == preset.reboundProfile;
+    }
 
     return Container(
       height: 340,
@@ -108,24 +120,34 @@ class PlaygroundControlsPanel extends StatelessWidget {
               children: [
                 PlaygroundPresetChip(
                   label: 'gentle',
+                  selected: isPresetSelected(const ElasticSheetConfig.gentle()),
                   onTap: () => onPreset(const ElasticSheetConfig.gentle()),
                 ),
                 PlaygroundPresetChip(
                   label: 'default',
+                  selected: isPresetSelected(const ElasticSheetConfig()),
                   onTap: () => onPreset(const ElasticSheetConfig()),
                 ),
                 PlaygroundPresetChip(
                   label: 'bouncy',
+                  selected: isPresetSelected(const ElasticSheetConfig.bouncy()),
                   onTap: () => onPreset(const ElasticSheetConfig.bouncy()),
                 ),
                 PlaygroundPresetChip(
                   key: const Key('playground_preset_natural'),
                   label: 'natural',
+                  selected: isPresetSelected(const ElasticSheetConfig.natural()),
                   onTap: () => onPreset(const ElasticSheetConfig.natural()),
                 ),
                 PlaygroundPresetChip(
                   label: 'snappy',
+                  selected: isPresetSelected(const ElasticSheetConfig.snappy()),
                   onTap: () => onPreset(const ElasticSheetConfig.snappy()),
+                ),
+                PlaygroundPresetChip(
+                  key: const Key('playground_preset_reset'),
+                  label: 'Reset',
+                  onTap: onReset,
                 ),
               ],
             ),
@@ -140,7 +162,7 @@ class PlaygroundControlsPanel extends StatelessWidget {
               onChanged: onStiffness,
               infoKey: const Key('playground_info_stiffness'),
               description:
-                  'يحدد قوة الربيع — كلما زادت زادت سرعة الحركة وقوة الارتداد.',
+                  'Defines the spring stiffness. Higher values result in faster movement and stronger rebound forces.',
             ),
             PlaygroundSliderRow(
               label: 'damping',
@@ -151,7 +173,7 @@ class PlaygroundControlsPanel extends StatelessWidget {
               onChanged: onDamping,
               infoKey: const Key('playground_info_damping'),
               description:
-                  'يحدد مقدار الاضمحلال — قيمة أقل تعني تذبذباً أكثر وإحساساً أكثر مطاطية.',
+                  'Defines the spring damping ratio. Lower values yield more oscillation and a bouncier feel.',
             ),
             PlaygroundSliderRow(
               label: 'mass',
@@ -162,7 +184,7 @@ class PlaygroundControlsPanel extends StatelessWidget {
               onChanged: onMass,
               infoKey: const Key('playground_info_mass'),
               description:
-                  'الكتلة الافتراضية على الربيع — قيمة أعلى تعطي إحساساً أثقل وأبطأ.',
+                  'Defines the spring mass. Higher values yield a heavier and slower movement feel.',
             ),
             PlaygroundSliderRow(
               label: 'overshoot',
@@ -414,10 +436,12 @@ class PlaygroundPresetChip extends StatelessWidget {
     super.key,
     required this.label,
     required this.onTap,
+    this.selected = false,
   });
 
   final String label;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -426,31 +450,46 @@ class PlaygroundPresetChip extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0F172A) : Colors.white,
+          color: selected
+              ? const Color(0xFF4F46E5)
+              : (isDark ? const Color(0xFF0F172A) : Colors.white),
           border: Border.all(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
+            color: selected
+                ? const Color(0xFF4F46E5)
+                : (isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB)),
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(100),
-          boxShadow: isDark
-              ? null
-              : const [
+          boxShadow: selected
+              ? const [
                   BoxShadow(
-                    color: Color(0x05000000),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
+                    color: Color(0x334F46E5),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
                   ),
-                ],
+                ]
+              : (isDark
+                  ? null
+                  : const [
+                      BoxShadow(
+                        color: Color(0x05000000),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ]),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF374151),
+            color: selected
+                ? Colors.white
+                : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF374151)),
             letterSpacing: -0.2,
           ),
         ),
@@ -803,7 +842,7 @@ class PlaygroundInfoButton extends StatelessWidget {
       context: context,
       builder: (context) {
         return Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: TextDirection.ltr,
           child: AlertDialog(
             backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
             shape: RoundedRectangleBorder(

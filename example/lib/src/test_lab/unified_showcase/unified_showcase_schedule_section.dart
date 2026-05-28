@@ -45,6 +45,8 @@ class UnifiedShowcaseScheduleSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
                 Expanded(
                   child: Text(
@@ -69,9 +71,7 @@ class UnifiedShowcaseScheduleSection extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   const gap = 8.0;
-                  final dayWidth = ((constraints.maxWidth - (gap * 3)) / 4)
-                      .clamp(70.0, 120.0)
-                      .toDouble();
+                  final dayWidth = (constraints.maxWidth - (gap * 3)) / 4;
                   final expandedWidth = constraints.maxWidth < 340
                       ? constraints.maxWidth - 16
                       : 228.0;
@@ -165,10 +165,14 @@ class UnifiedShowcaseScheduleSection extends StatelessWidget {
                             ),
                             behavior: HitTestBehavior.opaque,
                             onTap: onDayToggle,
-                            child: UnifiedShowcaseDaySurfaceButton(
-                              accent: dayAccent,
-                              shortLabel: strings.daySurfaceShortLabel,
-                              title: strings.daySurfaceTitle,
+                            child: Center(
+                              child: Text(
+                                strings.daySurfaceShortLabel,
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  color: dayAccent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                           expandedChild: UnifiedShowcaseSurfacePanel(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'checkout_enums.dart';
 
 class StackedSectionData {
   StackedSectionData({
@@ -6,6 +7,7 @@ class StackedSectionData {
     required this.top,
     required this.isExpanded,
     required this.expandedHeight,
+    required this.behavior,
     required this.child,
   });
 
@@ -13,5 +15,7 @@ class StackedSectionData {
   final double top;
   final bool isExpanded;
   final double expandedHeight;
+  final CheckoutSheetBehavior behavior;
   final Widget child;
 }
+

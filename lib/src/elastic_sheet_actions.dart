@@ -1,5 +1,3 @@
-// ignore: unnecessary_import
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import 'elastic_sheet_controller.dart';
